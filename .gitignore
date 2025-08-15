@@ -1,2 +1,17 @@
-"venv/" 
-".env" 
+# Python 
+__pycache__/
+.env
+venv/
+*.py[cod]
+*.pyo
+
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
