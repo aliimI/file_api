@@ -8,6 +8,7 @@ from alembic import context
 from app.database import Base, database_url
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
+from app.models.file import File
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
