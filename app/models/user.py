@@ -12,7 +12,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
-    role: Mapped[str] = mapped_column(String(50), default="user", nullable=False)
+    role: Mapped[str] = mapped_column(String(50), default="viewer", server_default="viewer", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
