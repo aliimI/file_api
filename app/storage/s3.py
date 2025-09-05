@@ -1,6 +1,7 @@
 import boto3
 
 from app.config import settings
+from botocore.exceptions import ClientError
 
 class S3Storage:
     def __init__(self):
@@ -27,7 +28,14 @@ class S3Storage:
 
     # get metadata
     def head(self, *, key: str) -> dict:
+      
         return self.client.head_object(Bucket=self.bucket, Key=key)
+
     
     def delete(self, *, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=key)
+
+    
+    def list_prefix(self, prefix: str):
+        resp = self.client.list_objects_v2(Bucket=self.bucket, Prefix=prefix)
+        return [obj["Key"] for obj in resp.get("Contents", [])]
