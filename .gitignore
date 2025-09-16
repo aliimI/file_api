@@ -15,3 +15,5 @@ venv/
 *.njsproj
 *.sln
 *.sw?
+
+app/tests

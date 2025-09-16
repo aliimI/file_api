@@ -5,6 +5,7 @@ from sqlalchemy import text
 from app.database import get_async_session
 from app.routes.auth import router as auth_router
 from app.routes.files import router as file_router
+from app.tasks.celery_app import celery_app
 
 app = FastAPI()
 

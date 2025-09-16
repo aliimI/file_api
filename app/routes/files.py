@@ -11,6 +11,7 @@ from app.models.file import File
 from app.core.deps_file import get_file_or_404
 from app.tasks.thumbnails import resize_image
 from botocore.exceptions import ClientError
+from app.config import settings
 
 
 router = APIRouter(
@@ -46,17 +47,21 @@ async def finalize_upload(
     #check key ownership
     if not key.startswith(f"{user.id}/"):
         raise HTTPException(status_code=403, detail="Key not owned by curent user")
-    print("FINALIZE key=", key)
-    print("Objects under prefix:", s3.list_prefix("2/"))
+   
     try:
         head = s3.head(key=key)
     except ClientError as e:
-        raise HTTPException(status_code=404, detail="Object not found in S3")
+        code = getattr(e, "response", {}).get("Error", {}).get("Code")
+        if code in ("404", "NoSuchKey", "NotFound"):
+            raise HTTPException(status_code=404, detail="Object not found in S3")
+        if code in ("403", "AccessDenied"):
+            raise HTTPException(status_code=403, detail="Access denied to S3 object")
+        raise
        
     
     size = int(head.get("ContentLength", 0))
     etag = (head.get("ETag") or "").strip('"')
-    ctype = payload.content_type or head.get("ContentType") or "application/octet-stream"
+    ctype = head.get("ContentType") or payload.content_type or "application/octet-stream"
 
     created = False
 
@@ -81,21 +86,27 @@ async def finalize_upload(
 
     await session.flush()
 
+    task_args = None
     #thumbnail job in queue
     if ctype.startswith("image/"):
         thumb_key = f"{db_file.storage_key}@thumb_256.jpg"
+        db_file.thumbnail_key = thumb_key
+
         get_url = s3.presigned_get(key=db_file.storage_key, expires_in=600)
         put_url = s3.presigned_put(key=thumb_key, content_type="image/jpeg", expires_in=600)
-
-        db_file.thumbnail_key = thumb_key
-        resize_image.delay(db_file.id, get_url, put_url, thumb_key)
-
+        task_args = (db_file.id, get_url, put_url, thumb_key)
+        
     await session.commit()
-    await session.refresh(db_file)
+       
+
+    if task_args:
+        resize_image.delay(*task_args)
+
+    
 
     #biuld response
     thumb_url = (
-        s3.presigned_get(key=db_file.thumbnail_key) 
+        s3.presigned_get(key=db_file.thumbnail_key, expires_in=900) 
         if getattr(db_file, "thumbnail_key", None) 
         else None
     )

@@ -3,12 +3,14 @@ from app.config import settings
 
 
 celery_app = Celery(
-    "app",
-    broker=settings.CELERY_BROKER_URL
+    "file_api",
+    broker=settings.CELERY_BROKER_URL,
+    include=[
+        "app.tasks.thumbnails",
+        ]
 )
 celery_app.autodiscover_tasks(["app.tasks"])
-# на всякий
-celery_app.conf.update(include=["app.tasks.thumbnails"])
+
 
 # на всякий
 celery_app.conf.update(
