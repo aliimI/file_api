@@ -11,7 +11,7 @@ class FinalizeRequest(BaseModel):
 
 class FileResponse(BaseModel):
     id: int
-    key: str = Field(serialization_alias="key", validation_alias="key", alias="storage_key")
+    key: str = Field(serialization_alias="key", alias="storage_key")
     filename: str
     content_type: str
     size: int

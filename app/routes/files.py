@@ -2,6 +2,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, status, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from typing import List
 
 from app.core.rbac import require_role
 from app.database import get_async_session
@@ -150,7 +151,9 @@ async def download_url(
     try:
         url = s3.presigned_get(key=db_file.storage_key)
     except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create download URL")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Failed to create download URL")
     
     return DownloadURL(url=url)
 
@@ -161,10 +164,23 @@ async def delete_file(
     db_file: File = Depends(get_file_or_404),
     session: AsyncSession = Depends(get_async_session),
 ):
+    keys: List[str] = [db_file.storage_key]
+    if getattr(db_file, "thumbnail_key", None):
+        keys.append(db_file.thumbnail_key)
+    else:
+        try:
+            for k in s3.list_keys(prefix=db_file.storage_key + "@"):
+                keys.append(k)
+        except Exception:
+            pass
     try:
-        s3.delete(key=db_file.storage_key)
+        s3.delete_many(keys)
     except Exception:
-        pass
+        for k in keys:
+            try:
+                s3.delete(key=k)
+            except Exception:
+                pass
     
     await session.delete(db_file)
     await session.commit()
